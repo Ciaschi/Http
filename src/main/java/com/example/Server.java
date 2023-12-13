@@ -2,28 +2,29 @@ package com.example;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class Server {
 
-    private ServerSocket serverSocket;
-    private Socket client;
-    private BufferedReader input;
-    private DataOutputStream output;
+    static private ServerSocket serverSocket;
+    static private Socket client;
+    static private BufferedReader input;
+    static private DataOutputStream output;
 
 
-     public void accept(){
-
-       
+     public static void accept(){
 
         try {
 
-            client = serverSocket.accept();
-            input = new BufferedReader(new InputStreamReader(client.getInputStream()));
-            output = new DataOutputStream(client.getOutputStream());
+            while(true){
+                client = serverSocket.accept();
+            }
 
         } catch (IOException e) {
             
@@ -33,7 +34,47 @@ public class Server {
 
      }
      
-     public void openServer() {
+     public class provoAFareUnaSortaDiMultiThread extends Thread{
+        private Socket s;
+        public provoAFareUnaSortaDiMultiThread(Socket s){
+            this.s = s;
+            try {
+                input = new BufferedReader(new InputStreamReader(client.getInputStream()));
+                output = new DataOutputStream(client.getOutputStream());
+            } catch (IOException e) {
+                e.printStackTrace();
+            } 
+        }
+        
+        @Override
+        public void run(){
+
+            String req = Server.read().split(" ")[1];
+
+            if(req.equals("/")){
+                req = "/index.html";
+            }
+
+            File file = new File("src/main/resources" + req);
+
+            try {
+                if(file.exists() && file.isFile()){
+                Server.reply("HTTP/1.1 200 OK\r\n".getBytes());
+                Server.reply("Content-type: text/html\r\n\r\n".getBytes());
+                Server.reply(Files.readAllBytes(file.toPath()));
+            }else{
+                Server.reply("HTTP/1.1 404 Not Found\r\n".getBytes());
+                Server.reply("Content-type: text/html\r\n\r\n".getBytes());
+                Server.reply(Files.readAllBytes(Paths.get("src/main/resources/error.html")));
+            }
+            } catch (Exception e) {
+            }
+
+        }
+
+     }
+
+     public static void openServer() {
 
           try {
 
@@ -46,7 +87,7 @@ public class Server {
           }
      }
 
-     public String read(){
+     public static String read(){
         try {
             return input.readLine();
         } catch (IOException e) {
@@ -55,9 +96,9 @@ public class Server {
         return null;
      } 
     
-     public void reply(byte [] parametro){
+     public static void reply(byte [] p){
         try {
-            output.write(parametro);
+            output.write(p);
         } catch (IOException e) {
             e.printStackTrace();
         }
